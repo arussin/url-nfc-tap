@@ -1,0 +1,16 @@
+# Android and Gradle output
+.gradle/
+build/
+**/build/
+local.properties
+
+# IDE files
+.idea/
+*.iml
+
+# Local signing material
+*.jks
+*.keystore
+
+# Personal link configuration. Copy links.properties.example to this file.
+links.properties

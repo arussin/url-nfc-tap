@@ -1,0 +1,57 @@
+name: Android build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NFC_PRIMARY_LABEL: ${{ secrets.NFC_PRIMARY_LABEL }}
+      NFC_PRIMARY_URL: ${{ secrets.NFC_PRIMARY_URL }}
+      NFC_SECONDARY_LABEL: ${{ secrets.NFC_SECONDARY_LABEL }}
+      NFC_SECONDARY_URL: ${{ secrets.NFC_SECONDARY_URL }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0" >/dev/null
+
+      - name: Require personalized links for downloadable builds
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          test -n "$NFC_PRIMARY_LABEL"
+          test -n "$NFC_PRIMARY_URL"
+          test -n "$NFC_SECONDARY_LABEL"
+          test -n "$NFC_SECONDARY_URL"
+
+      - name: Test, lint, and build
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
+
+      - name: Upload personalized APK
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: url-nfc-tap-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

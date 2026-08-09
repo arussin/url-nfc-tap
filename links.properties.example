@@ -1,0 +1,6 @@
+# Copy this file to links.properties and replace the example values.
+# links.properties is intentionally ignored by Git.
+nfc.primary.label=Primary link
+nfc.primary.url=https://example.com/profile
+nfc.secondary.label=Secondary link
+nfc.secondary.url=https://example.com

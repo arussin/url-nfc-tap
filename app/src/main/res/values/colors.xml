@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_blue">#0A66C2</color>
+    <color name="brand_blue_dark">#064785</color>
+    <color name="page_background">#F3F6F8</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_primary">#14212B</color>
+    <color name="text_secondary">#536471</color>
+    <color name="border">#D7E0E7</color>
+    <color name="success_background">#E7F7EE</color>
+    <color name="success_text">#176B3A</color>
+    <color name="warning_background">#FFF4D6</color>
+    <color name="warning_text">#7A4B00</color>
+    <color name="icon_background">#0A66C2</color>
+    <color name="white">#FFFFFF</color>
+</resources>
