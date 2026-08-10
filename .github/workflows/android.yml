@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      version_code:
+        description: Google Play version code (increase for every later Play upload)
+        required: true
+        default: "1"
 
 permissions:
   contents: read
@@ -17,6 +22,7 @@ jobs:
       NFC_PRIMARY_URL: ${{ secrets.NFC_PRIMARY_URL }}
       NFC_SECONDARY_LABEL: ${{ secrets.NFC_SECONDARY_LABEL }}
       NFC_SECONDARY_URL: ${{ secrets.NFC_SECONDARY_URL }}
+      PLAY_VERSION_CODE: ${{ inputs.version_code }}
 
     steps:
       - name: Check out source
@@ -40,8 +46,41 @@ jobs:
           test -n "$NFC_SECONDARY_LABEL"
           test -n "$NFC_SECONDARY_URL"
 
+      - name: Prepare one-time Play upload key
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          key_path="$RUNNER_TEMP/url-nfc-tap-upload-key.jks"
+          key_password="$(openssl rand -hex 32)"
+          echo "::add-mask::$key_password"
+          keytool -genkeypair \
+            -keystore "$key_path" \
+            -storetype PKCS12 \
+            -alias upload \
+            -keyalg RSA \
+            -keysize 4096 \
+            -validity 10000 \
+            -storepass "$key_password" \
+            -keypass "$key_password" \
+            -dname "CN=URL NFC Tap Upload, O=URL NFC Tap, C=US" \
+            -noprompt
+          chmod 600 "$key_path"
+          echo "PLAY_UPLOAD_KEYSTORE_PATH=$key_path" >> "$GITHUB_ENV"
+          echo "PLAY_UPLOAD_KEY_ALIAS=upload" >> "$GITHUB_ENV"
+          echo "PLAY_UPLOAD_KEYSTORE_PASSWORD=$key_password" >> "$GITHUB_ENV"
+          echo "PLAY_UPLOAD_KEY_PASSWORD=$key_password" >> "$GITHUB_ENV"
+
       - name: Test, lint, and build
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            ./gradlew testDebugUnitTest lintDebug assembleDebug bundleRelease
+          else
+            ./gradlew testDebugUnitTest lintDebug assembleDebug
+          fi
+
+      - name: Verify Play bundle signature
+        if: github.event_name == 'workflow_dispatch'
+        run: jarsigner -verify app/build/outputs/bundle/release/app-release.aab
 
       - name: Upload personalized APK
         if: github.event_name == 'workflow_dispatch'
@@ -49,5 +88,14 @@ jobs:
         with:
           name: url-nfc-tap-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Play bundle
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: url-nfc-tap-play-bundle
+          path: app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
