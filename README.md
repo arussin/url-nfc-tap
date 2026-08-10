@@ -49,7 +49,14 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Build a personalized APK with GitHub Actions
 
-Add the four environment-variable names above as GitHub Actions repository secrets, then manually run the **Android build** workflow. Manual runs require all four secrets and upload the resulting APK as the `url-nfc-tap-apk` artifact. Ordinary pushes and pull requests use example values and do not publish an APK.
+Add the four environment-variable names above as GitHub Actions repository secrets, then manually run the **Android build** workflow. Manual runs upload:
+
+- `url-nfc-tap-apk`, an installable debug APK
+- `url-nfc-tap-play-bundle`, a signed release bundle for Google Play
+
+The workflow uses an ephemeral upload key for this initial internal-testing build and destroys it with the runner. Google Play holds the separate app-signing key. A later Play update will require registering a new upload key through Play Console's upload-key reset process. Increase the workflow's version-code input for every later Play upload.
+
+Ordinary pushes and pull requests use example link values, run validation, and do not publish downloadable artifacts.
 
 ## How it works
 
