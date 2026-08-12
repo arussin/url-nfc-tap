@@ -64,6 +64,14 @@ Add the four link environment-variable names above as GitHub Actions repository 
 
 Keep a private backup of the keystore and its passwords; never commit them. Encode the keystore as a single-line Base64 value for `PLAY_UPLOAD_KEYSTORE_BASE64`.
 
+The easiest setup is to open this repository in a GitHub Codespace and run:
+
+```bash
+./scripts/setup-play-upload-key.sh
+```
+
+The script generates the durable key, configures all four signing secrets with GitHub CLI, and creates an ignored backup archive under `.play-signing/`. Download that archive and store it privately. If replacing the ephemeral key used for the first release, submit `.play-signing/upload-certificate.pem` in Play Console's upload-key reset flow.
+
 Then manually run the **Android build** workflow. Manual runs upload:
 
 - `url-nfc-tap-apk`, an installable debug APK

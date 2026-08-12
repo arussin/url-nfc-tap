@@ -11,6 +11,7 @@ local.properties
 # Local signing material
 *.jks
 *.keystore
+.play-signing/
 
 # Personal link configuration. Copy links.properties.example to this file.
 links.properties
