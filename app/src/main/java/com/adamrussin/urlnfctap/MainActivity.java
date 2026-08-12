@@ -8,6 +8,7 @@ import android.nfc.NfcAdapter;
 import android.nfc.cardemulation.CardEmulation;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -15,7 +16,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public final class MainActivity extends Activity {
+    private static final String TAG = "UrlNfcTap";
     private static final String SAVED_PRIMARY_SELECTED = "primary_selected";
+    private static final String SAVED_SHARING_ENABLED = "sharing_enabled";
 
     private LinearLayout statusPanel;
     private TextView statusTitle;
@@ -24,12 +27,16 @@ public final class MainActivity extends Activity {
     private TextView currentUrl;
     private Button primaryButton;
     private Button secondaryButton;
+    private Button stopSharingButton;
     private Button nfcSettingsButton;
 
     private NfcAdapter nfcAdapter;
     private CardEmulation cardEmulation;
     private ComponentName serviceComponent;
     private boolean primarySelected = true;
+    private boolean sharingEnabled = true;
+    private boolean nfcPreferenceSet;
+    private boolean nfcReleaseFailed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,27 +50,22 @@ public final class MainActivity extends Activity {
 
         primarySelected = savedInstanceState == null
                 || savedInstanceState.getBoolean(SAVED_PRIMARY_SELECTED, true);
+        sharingEnabled = savedInstanceState == null
+                || savedInstanceState.getBoolean(SAVED_SHARING_ENABLED, true);
         selectDestination(primarySelected);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        ShareState.setActive(true);
-        preferThisNfcService();
+        applySharingState();
         refreshNfcStatus();
     }
 
     @Override
     protected void onPause() {
         ShareState.setActive(false);
-        if (cardEmulation != null) {
-            try {
-                cardEmulation.unsetPreferredService(this);
-            } catch (RuntimeException ignored) {
-                // The service may already have been released by the NFC stack.
-            }
-        }
+        releaseThisNfcService();
         super.onPause();
     }
 
@@ -73,12 +75,16 @@ public final class MainActivity extends Activity {
         setIntent(intent);
         if (Intent.ACTION_MAIN.equals(intent.getAction())) {
             selectDestination(true);
+            sharingEnabled = true;
+            applySharingState();
+            refreshNfcStatus();
         }
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         outState.putBoolean(SAVED_PRIMARY_SELECTED, primarySelected);
+        outState.putBoolean(SAVED_SHARING_ENABLED, sharingEnabled);
         super.onSaveInstanceState(outState);
     }
 
@@ -90,6 +96,7 @@ public final class MainActivity extends Activity {
         currentUrl = findViewById(R.id.current_url);
         primaryButton = findViewById(R.id.primary_button);
         secondaryButton = findViewById(R.id.secondary_button);
+        stopSharingButton = findViewById(R.id.stop_sharing_button);
         nfcSettingsButton = findViewById(R.id.nfc_settings_button);
 
         primaryButton.setText(BuildConfig.PRIMARY_LABEL);
@@ -108,6 +115,11 @@ public final class MainActivity extends Activity {
     private void configureActions() {
         primaryButton.setOnClickListener(view -> selectDestination(true));
         secondaryButton.setOnClickListener(view -> selectDestination(false));
+        stopSharingButton.setOnClickListener(view -> {
+            sharingEnabled = !sharingEnabled;
+            applySharingState();
+            refreshNfcStatus();
+        });
         nfcSettingsButton.setOnClickListener(view -> {
             try {
                 startActivity(new Intent(Settings.ACTION_NFC_SETTINGS));
@@ -135,10 +147,44 @@ public final class MainActivity extends Activity {
 
     private void preferThisNfcService() {
         if (cardEmulation == null || nfcAdapter == null || !nfcAdapter.isEnabled()) return;
+        nfcReleaseFailed = false;
         try {
-            cardEmulation.setPreferredService(this, serviceComponent);
-        } catch (RuntimeException ignored) {
-            // The registered CATEGORY_OTHER AID can still be routed to the service.
+            nfcPreferenceSet = cardEmulation.setPreferredService(this, serviceComponent);
+            if (!nfcPreferenceSet) {
+                Log.w(TAG, "Android declined the foreground NFC service preference");
+            }
+        } catch (RuntimeException error) {
+            nfcPreferenceSet = false;
+            Log.w(TAG, "Unable to set the foreground NFC service preference", error);
+        }
+    }
+
+    private void applySharingState() {
+        ShareState.setActive(sharingEnabled);
+        stopSharingButton.setText(sharingEnabled
+                ? R.string.stop_sharing
+                : R.string.start_sharing);
+        if (sharingEnabled) {
+            preferThisNfcService();
+        } else {
+            releaseThisNfcService();
+        }
+    }
+
+    private void releaseThisNfcService() {
+        if (cardEmulation == null || !nfcPreferenceSet) return;
+        try {
+            if (!cardEmulation.unsetPreferredService(this)) {
+                nfcReleaseFailed = true;
+                Log.w(TAG, "Android declined to release the foreground NFC service preference");
+            } else {
+                nfcReleaseFailed = false;
+            }
+        } catch (RuntimeException error) {
+            nfcReleaseFailed = true;
+            Log.w(TAG, "Unable to release the foreground NFC service preference", error);
+        } finally {
+            nfcPreferenceSet = false;
         }
     }
 
@@ -150,6 +196,14 @@ public final class MainActivity extends Activity {
             showWarning(R.string.unsupported_title, R.string.unsupported_detail, false);
         } else if (!nfcAdapter.isEnabled()) {
             showWarning(R.string.nfc_off_title, R.string.nfc_off_detail, true);
+        } else if (nfcReleaseFailed) {
+            showWarning(R.string.release_failed_title, R.string.release_failed_detail, true);
+        } else if (!sharingEnabled) {
+            statusPanel.setBackgroundResource(R.drawable.panel_background);
+            statusTitle.setText(R.string.paused_title);
+            statusTitle.setTextColor(getColor(R.color.text_secondary));
+            statusDetail.setText(R.string.paused_detail);
+            nfcSettingsButton.setVisibility(View.GONE);
         } else {
             statusPanel.setBackgroundResource(R.drawable.status_active);
             statusTitle.setText(R.string.ready_title);

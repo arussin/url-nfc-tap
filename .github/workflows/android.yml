@@ -9,7 +9,7 @@ on:
       version_code:
         description: Google Play version code (increase for every later Play upload)
         required: true
-        default: "1"
+        default: "2"
 
 permissions:
   contents: read
@@ -23,6 +23,10 @@ jobs:
       NFC_SECONDARY_LABEL: ${{ secrets.NFC_SECONDARY_LABEL }}
       NFC_SECONDARY_URL: ${{ secrets.NFC_SECONDARY_URL }}
       PLAY_VERSION_CODE: ${{ inputs.version_code }}
+      PLAY_UPLOAD_KEYSTORE_BASE64: ${{ secrets.PLAY_UPLOAD_KEYSTORE_BASE64 }}
+      PLAY_UPLOAD_KEY_ALIAS: ${{ secrets.PLAY_UPLOAD_KEY_ALIAS }}
+      PLAY_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.PLAY_UPLOAD_KEYSTORE_PASSWORD }}
+      PLAY_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAY_UPLOAD_KEY_PASSWORD }}
 
     steps:
       - name: Check out source
@@ -37,7 +41,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Require personalized links for downloadable builds
+      - name: Require personalized links and Play signing key
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
@@ -45,30 +49,23 @@ jobs:
           test -n "$NFC_PRIMARY_URL"
           test -n "$NFC_SECONDARY_LABEL"
           test -n "$NFC_SECONDARY_URL"
+          test -n "$PLAY_UPLOAD_KEYSTORE_BASE64"
+          test -n "$PLAY_UPLOAD_KEY_ALIAS"
+          test -n "$PLAY_UPLOAD_KEYSTORE_PASSWORD"
+          test -n "$PLAY_UPLOAD_KEY_PASSWORD"
 
-      - name: Prepare one-time Play upload key
+      - name: Prepare Play upload key
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           key_path="$RUNNER_TEMP/url-nfc-tap-upload-key.jks"
-          key_password="$(openssl rand -hex 32)"
-          echo "::add-mask::$key_password"
-          keytool -genkeypair \
-            -keystore "$key_path" \
-            -storetype PKCS12 \
-            -alias upload \
-            -keyalg RSA \
-            -keysize 4096 \
-            -validity 10000 \
-            -storepass "$key_password" \
-            -keypass "$key_password" \
-            -dname "CN=URL NFC Tap Upload, O=URL NFC Tap, C=US" \
-            -noprompt
+          printf '%s' "$PLAY_UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$key_path"
           chmod 600 "$key_path"
+          keytool -list \
+            -keystore "$key_path" \
+            -alias "$PLAY_UPLOAD_KEY_ALIAS" \
+            -storepass "$PLAY_UPLOAD_KEYSTORE_PASSWORD" > /dev/null
           echo "PLAY_UPLOAD_KEYSTORE_PATH=$key_path" >> "$GITHUB_ENV"
-          echo "PLAY_UPLOAD_KEY_ALIAS=upload" >> "$GITHUB_ENV"
-          echo "PLAY_UPLOAD_KEYSTORE_PASSWORD=$key_password" >> "$GITHUB_ENV"
-          echo "PLAY_UPLOAD_KEY_PASSWORD=$key_password" >> "$GITHUB_ENV"
 
       - name: Test, lint, and build
         run: |
