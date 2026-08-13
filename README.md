@@ -55,8 +55,6 @@ Opening the app starts sharing the primary destination. Leave sharing on to tap 
 
 ## Build personalized releases with GitHub Actions
 
-The current Google Play package is `com.adamrussin.urlnfctap2`. It intentionally differs from the original internal-test package, whose one-time upload key was not retained. Keep this package name unchanged so future builds update the replacement app rather than creating another Play identity.
-
 Add the four link environment-variable names above as GitHub Actions repository secrets. Release builds also require a durable Play upload keystore in these repository secrets:
 
 - `PLAY_UPLOAD_KEYSTORE_BASE64`
