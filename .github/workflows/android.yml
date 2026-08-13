@@ -9,7 +9,7 @@ on:
       version_code:
         description: Google Play version code (increase for every later Play upload)
         required: true
-        default: "1"
+        default: "2"
 
 permissions:
   contents: read

@@ -7,9 +7,7 @@
     <string name="ready_title">Ready to tap</string>
     <string name="ready_detail">Hold the top of the other phone against this phone’s upper back. You can share with multiple phones.</string>
     <string name="paused_title">Sharing off</string>
-    <string name="paused_detail">URL NFC Tap has released NFC so Wallet and other tap services can work normally.</string>
-    <string name="release_failed_title">NFC release needs attention</string>
-    <string name="release_failed_detail">Android did not confirm the NFC release. Close the app, then turn NFC off and back on before using Wallet.</string>
+    <string name="paused_detail">URL NFC Tap is not responding to NFC taps. Wallet and other tap services remain available.</string>
     <string name="nfc_off_title">NFC is turned off</string>
     <string name="nfc_off_detail">Turn on NFC, then return here to begin sharing.</string>
     <string name="unsupported_title">NFC emulation isn’t supported</string>

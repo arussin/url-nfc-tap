@@ -1,14 +1,12 @@
 package com.adamrussin.urlnfctap;
 
 import android.app.Activity;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.nfc.NfcAdapter;
 import android.nfc.cardemulation.CardEmulation;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -16,7 +14,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public final class MainActivity extends Activity {
-    private static final String TAG = "UrlNfcTap";
     private static final String SAVED_PRIMARY_SELECTED = "primary_selected";
     private static final String SAVED_SHARING_ENABLED = "sharing_enabled";
 
@@ -32,11 +29,8 @@ public final class MainActivity extends Activity {
 
     private NfcAdapter nfcAdapter;
     private CardEmulation cardEmulation;
-    private ComponentName serviceComponent;
     private boolean primarySelected = true;
     private boolean sharingEnabled = true;
-    private boolean nfcPreferenceSet;
-    private boolean nfcReleaseFailed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +52,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        clearLegacyForegroundNfcPreference();
         applySharingState();
         refreshNfcStatus();
     }
@@ -65,7 +60,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onPause() {
         ShareState.setActive(false);
-        releaseThisNfcService();
+        clearLegacyForegroundNfcPreference();
         super.onPause();
     }
 
@@ -105,7 +100,6 @@ public final class MainActivity extends Activity {
 
     private void configureNfc() {
         nfcAdapter = NfcAdapter.getDefaultAdapter(this);
-        serviceComponent = new ComponentName(this, UrlHostApduService.class);
         if (nfcAdapter != null
                 && getPackageManager().hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION)) {
             cardEmulation = CardEmulation.getInstance(nfcAdapter);
@@ -145,46 +139,24 @@ public final class MainActivity extends Activity {
                 + (!selectPrimary ? ", selected" : ", tap to select"));
     }
 
-    private void preferThisNfcService() {
-        if (cardEmulation == null || nfcAdapter == null || !nfcAdapter.isEnabled()) return;
-        nfcReleaseFailed = false;
-        try {
-            nfcPreferenceSet = cardEmulation.setPreferredService(this, serviceComponent);
-            if (!nfcPreferenceSet) {
-                Log.w(TAG, "Android declined the foreground NFC service preference");
-            }
-        } catch (RuntimeException error) {
-            nfcPreferenceSet = false;
-            Log.w(TAG, "Unable to set the foreground NFC service preference", error);
-        }
-    }
-
     private void applySharingState() {
         ShareState.setActive(sharingEnabled);
         stopSharingButton.setText(sharingEnabled
                 ? R.string.stop_sharing
                 : R.string.start_sharing);
-        if (sharingEnabled) {
-            preferThisNfcService();
-        } else {
-            releaseThisNfcService();
+        if (!sharingEnabled) {
+            clearLegacyForegroundNfcPreference();
         }
     }
 
-    private void releaseThisNfcService() {
-        if (cardEmulation == null || !nfcPreferenceSet) return;
+    private void clearLegacyForegroundNfcPreference() {
+        if (cardEmulation == null) return;
         try {
-            if (!cardEmulation.unsetPreferredService(this)) {
-                nfcReleaseFailed = true;
-                Log.w(TAG, "Android declined to release the foreground NFC service preference");
-            } else {
-                nfcReleaseFailed = false;
-            }
-        } catch (RuntimeException error) {
-            nfcReleaseFailed = true;
-            Log.w(TAG, "Unable to release the foreground NFC service preference", error);
-        } finally {
-            nfcPreferenceSet = false;
+            // Version 1.0.0 requested foreground HCE priority. Clear any preference it left
+            // behind, then rely on normal AID routing so Google Wallet remains the default.
+            cardEmulation.unsetPreferredService(this);
+        } catch (RuntimeException ignored) {
+            // There may be no legacy preference to clear.
         }
     }
 
@@ -196,8 +168,6 @@ public final class MainActivity extends Activity {
             showWarning(R.string.unsupported_title, R.string.unsupported_detail, false);
         } else if (!nfcAdapter.isEnabled()) {
             showWarning(R.string.nfc_off_title, R.string.nfc_off_detail, true);
-        } else if (nfcReleaseFailed) {
-            showWarning(R.string.release_failed_title, R.string.release_failed_detail, true);
         } else if (!sharingEnabled) {
             statusPanel.setBackgroundResource(R.drawable.panel_background);
             statusTitle.setText(R.string.paused_title);

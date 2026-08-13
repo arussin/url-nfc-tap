@@ -8,10 +8,10 @@ The app uses Android's official Host Card Emulation API. It does not require roo
 
 - Immediately emulates the primary URL when freshly opened
 - Continues sharing with multiple phones until you stop it
-- One-tap Start/Stop control that releases NFC for Wallet and other tap services
+- One-tap Start/Stop control that stops URL responses before using Wallet
 - One-tap switching between two labeled destinations
 - Standard NDEF URI record for broad reader compatibility
-- Foreground NFC preference only while the app is visible and sharing is on
+- Uses normal AID routing without claiming foreground priority over Google Wallet
 - No runtime permissions and no `INTERNET` permission
 - Personal URLs kept out of source control
 
@@ -51,7 +51,7 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Use the app
 
-Opening the app starts sharing the primary destination. Leave sharing on to tap multiple phones, or tap **Stop sharing** before using Google Wallet or another NFC service. Tap **Start sharing** to resume. Leaving the app also releases its foreground NFC preference automatically.
+Opening the app starts sharing the primary destination. Leave sharing on to tap multiple phones, or tap **Stop sharing** before using Google Wallet or another NFC service. Tap **Start sharing** to resume. Leaving the app also stops URL responses automatically.
 
 ## Build personalized releases with GitHub Actions
 
@@ -87,9 +87,9 @@ Ordinary pushes and pull requests use example link values, run validation, and d
 
 ## How it works
 
-The foreground activity asks Android to prefer this app's `HostApduService`. The service implements the NFC Forum Type 4 Tag application, exposes a read-only Capability Container and NDEF file, and builds an NDEF URI record from the currently selected destination.
+The service implements the NFC Forum Type 4 Tag application, exposes a read-only Capability Container and NDEF file, and builds an NDEF URI record from the currently selected destination. It relies on Android's normal AID routing instead of requesting foreground HCE priority, allowing the default wallet to retain payment routing.
 
-Turning sharing off, closing the activity, or backgrounding it releases the foreground preference and makes the service decline NFC reads. The device must support Host Card Emulation, NFC must be enabled, and the sharing screen should remain open and unlocked during a tap.
+Turning sharing off, closing the activity, or backgrounding it makes the service decline NFC reads. The device must support Host Card Emulation, NFC must be enabled, and the sharing screen should remain open and unlocked during a tap.
 
 ## Privacy and security
 
