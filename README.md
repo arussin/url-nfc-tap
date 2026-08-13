@@ -72,6 +72,8 @@ The easiest setup is to open this repository in a GitHub Codespace and run:
 
 The script generates the durable key, configures all four signing secrets with GitHub CLI, and creates an ignored backup archive under `.play-signing/`. Download that archive and store it privately. If replacing the ephemeral key used for the first release, submit `.play-signing/upload-certificate.pem` in Play Console's upload-key reset flow.
 
+Codespaces initially uses a restricted token that may be unable to create Actions secrets. If the script reports that error, follow the three authentication commands it prints. Running the script again safely reuses the key already generated; it does not overwrite it.
+
 Then manually run the **Android build** workflow. Manual runs upload:
 
 - `url-nfc-tap-apk`, an installable debug APK
