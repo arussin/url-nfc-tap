@@ -55,6 +55,8 @@ Opening the app starts sharing the primary destination. Leave sharing on to tap 
 
 ## Build personalized releases with GitHub Actions
 
+The Google Play application ID is `com.adamrussin.urlnfctap.v2`. The `.v2` suffix distinguishes this new Play identity from the original internal-test app, while the repository, Android project, and user-visible app name remain **URL NFC Tap**. Keep the application ID unchanged so future builds update this app instead of creating another Play identity.
+
 Add the four link environment-variable names above as GitHub Actions repository secrets. Release builds also require a durable Play upload keystore in these repository secrets:
 
 - `PLAY_UPLOAD_KEYSTORE_BASE64`
