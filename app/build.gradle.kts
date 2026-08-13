@@ -30,7 +30,7 @@ val configuredVersionCode = providers.environmentVariable("PLAY_VERSION_CODE").o
     ?.trim()
     ?.toIntOrNull()
     ?.takeIf { it > 0 }
-    ?: 1
+    ?: 2
 
 val playKeystorePath = providers.environmentVariable("PLAY_UPLOAD_KEYSTORE_PATH").orNull?.trim()
 val playKeystorePassword = providers.environmentVariable("PLAY_UPLOAD_KEYSTORE_PASSWORD").orNull
@@ -54,11 +54,11 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.adamrussin.urlnfctap2"
+        applicationId = "com.adamrussin.urlnfctap"
         minSdk = 23
         targetSdk = 36
         versionCode = configuredVersionCode
-        versionName = "1.0.0"
+        versionName = "1.1.0"
 
         buildConfigField("String", "PRIMARY_LABEL", quotedBuildConfigValue(primaryLabel))
         buildConfigField("String", "PRIMARY_URL", quotedBuildConfigValue(primaryUrl))
