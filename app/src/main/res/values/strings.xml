@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">URL NFC Tap</string>
+    <string name="app_name">URL NFC Tap 2</string>
     <string name="headline">Tap your phone.\nShare your link.</string>
     <string name="nfc_service_description">Shares the selected web link over NFC</string>
     <string name="nfc_aid_group_description">NDEF URL sharing</string>
